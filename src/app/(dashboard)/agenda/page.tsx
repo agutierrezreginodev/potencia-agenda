@@ -6,21 +6,26 @@ import { es } from "date-fns/locale";
 import {
     ChevronLeft,
     ChevronRight,
-    CalendarDays,
     Clock,
     Sparkles,
     Plus,
 } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 
-import { getEvents } from "@/core/application/actions/event-actions";
+import { getEvents, getEvent } from "@/core/application/actions/event-actions";
 import { Button } from "@/presentation/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/presentation/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/presentation/components/ui/card";
 import { Badge } from "@/presentation/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/presentation/components/ui/tabs";
 import { Skeleton } from "@/presentation/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { EventDetailsDialog } from "@/presentation/components/events/event-details-dialog";
+import type { IEvent } from "@/core/domain/models/event";
 
+// We use IEvent directly for details, but list uses partial. 
+// For simplicity, let's cast list items to any or partial IEvent for now, 
+// and fetch full details when opening dialog.
 interface EventData {
     id: string;
     title: string;
@@ -38,6 +43,12 @@ export default function AgendaPage() {
     const [events, setEvents] = useState<EventData[]>([]);
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState<"month" | "week">("month");
+
+    // Details Dialog State
+    const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+    const [selectedEvent, setSelectedEvent] = useState<IEvent | null>(null);
+    const [detailsOpen, setDetailsOpen] = useState(false);
+    const [loadingDetails, setLoadingDetails] = useState(false);
 
     const fetchEvents = useCallback(async () => {
         setLoading(true);
@@ -60,6 +71,30 @@ export default function AgendaPage() {
     useEffect(() => {
         fetchEvents();
     }, [fetchEvents]);
+
+    // Fetch full details when an event is clicked
+    const handleEventClick = async (eventId: string) => {
+        setSelectedEventId(eventId);
+        setLoadingDetails(true);
+        setDetailsOpen(true);
+        try {
+            const data = await getEvent(eventId);
+            setSelectedEvent(data as unknown as IEvent);
+        } catch {
+            toast.error("Error al cargar detalles");
+            setDetailsOpen(false);
+        } finally {
+            setLoadingDetails(false);
+        }
+    };
+
+    const handleCloseDetails = (open: boolean) => {
+        setDetailsOpen(open);
+        if (!open) {
+            setSelectedEvent(null);
+            setSelectedEventId(null);
+        }
+    };
 
     const goToPrev = () => {
         setCurrentDate((d) =>
@@ -129,10 +164,25 @@ export default function AgendaPage() {
             {loading ? (
                 <Skeleton className="h-[600px] rounded-xl" />
             ) : view === "month" ? (
-                <MonthView currentDate={currentDate} events={events} />
+                <MonthView
+                    currentDate={currentDate}
+                    events={events}
+                    onEventClick={handleEventClick}
+                />
             ) : (
-                <WeekView currentDate={currentDate} events={events} />
+                <WeekView
+                    currentDate={currentDate}
+                    events={events}
+                    onEventClick={handleEventClick}
+                />
             )}
+
+            <EventDetailsDialog
+                open={detailsOpen}
+                onOpenChange={handleCloseDetails}
+                event={selectedEvent}
+                onDelete={fetchEvents}
+            />
         </div>
     );
 }
@@ -140,9 +190,11 @@ export default function AgendaPage() {
 function MonthView({
     currentDate,
     events,
+    onEventClick,
 }: {
     currentDate: Date;
     events: EventData[];
+    onEventClick: (id: string) => void;
 }) {
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
@@ -195,6 +247,7 @@ function MonthView({
                                     {dayEvents.slice(0, 3).map((event) => (
                                         <div
                                             key={event.id}
+                                            onClick={() => onEventClick(event.id)}
                                             className={cn(
                                                 "text-[11px] px-1.5 py-0.5 rounded truncate cursor-pointer transition-colors",
                                                 event.is_draft
@@ -229,9 +282,11 @@ function MonthView({
 function WeekView({
     currentDate,
     events,
+    onEventClick,
 }: {
     currentDate: Date;
     events: EventData[];
+    onEventClick: (id: string) => void;
 }) {
     const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
     const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
@@ -273,6 +328,7 @@ function WeekView({
                                 dayEvents.map((event) => (
                                     <div
                                         key={event.id}
+                                        onClick={() => onEventClick(event.id)}
                                         className="p-2 rounded-lg border bg-surface hover:border-brand-200 transition-colors cursor-pointer"
                                     >
                                         <p className="text-[11px] font-semibold text-brand-500 flex items-center gap-1">
