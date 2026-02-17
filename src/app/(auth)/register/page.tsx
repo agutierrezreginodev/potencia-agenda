@@ -37,7 +37,9 @@ export default function RegisterPage() {
                 options: {
                     data: {
                         full_name: data.full_name,
+                        avatar_url: `https://avatar.vercel.sh/${data.email}`,
                     },
+                    emailRedirectTo: `${window.location.origin}/auth/callback`,
                 },
             });
 
