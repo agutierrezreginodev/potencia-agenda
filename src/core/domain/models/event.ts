@@ -20,11 +20,7 @@ export interface IAiGuide {
         estimated_duration: string;
         resources: string[];
     }>;
-    estimated_costs: {
-        setup: { min: number; max: number };
-        monthly: { min: number; max: number };
-        annual: { min: number; max: number };
-    };
+    estimated_costs: string;
     risks_and_challenges: Array<{
         risk: string;
         level: "alto" | "medio" | "bajo";

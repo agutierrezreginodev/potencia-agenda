@@ -15,7 +15,7 @@ export async function getEvents(params?: {
 
     let query = supabase
         .from("events")
-        .select("*, clients(id, full_name, company, email, phone)")
+        .select("*, client:clients(id, full_name, company, email, phone)")
         .eq("user_id", user.id);
 
     if (params?.startDate) {
@@ -46,7 +46,7 @@ export async function getEvent(id: string) {
 
     const { data, error } = await supabase
         .from("events")
-        .select("*, clients(id, full_name, company, email, phone)")
+        .select("*, client:clients(id, full_name, company, email, phone)")
         .eq("id", id)
         .eq("user_id", user.id)
         .single();
@@ -61,7 +61,8 @@ export async function createEvent(
     aiStatus: string,
     aiModel: string | null,
     aiTokens: number | null,
-    isDraft: boolean
+    isDraft: boolean,
+    timezoneOffset: number = 0
 ) {
     const parsed = createEventSchema.safeParse(input);
     if (!parsed.success) {
@@ -102,7 +103,15 @@ export async function createEvent(
     }
 
     // Create event
-    const startAt = `${parsed.data.start_date}T${parsed.data.start_time}:00`;
+    // Create event with timezone adjustment
+    // timezoneOffset is in minutes (e.g., 300 for UTC-5)
+    // We want to construct an ISO string with the offset: YYYY-MM-DDTHH:mm:00-05:00
+
+    const offsetHours = Math.floor(Math.abs(timezoneOffset) / 60).toString().padStart(2, "0");
+    const offsetMinutes = (Math.abs(timezoneOffset) % 60).toString().padStart(2, "0");
+    const sign = timezoneOffset > 0 ? "-" : "+"; // JS getTimezoneOffset returns positive for West (behind UTC)
+
+    const startAt = `${parsed.data.start_date}T${parsed.data.start_time}:00${sign}${offsetHours}:${offsetMinutes}`;
 
     const { data, error } = await supabase
         .from("events")
@@ -120,7 +129,7 @@ export async function createEvent(
             notes: parsed.data.notes || null,
             is_draft: isDraft,
         })
-        .select("*, clients(id, full_name, company, email, phone)")
+        .select("*, client:clients(id, full_name, company, email, phone)")
         .single();
 
     if (error) throw new Error(error.message);
@@ -140,7 +149,7 @@ export async function updateEvent(
         .update(updates)
         .eq("id", id)
         .eq("user_id", user.id)
-        .select("*, clients(id, full_name, company, email, phone)")
+        .select("*, client:clients(id, full_name, company, email, phone)")
         .single();
 
     if (error) throw new Error(error.message);

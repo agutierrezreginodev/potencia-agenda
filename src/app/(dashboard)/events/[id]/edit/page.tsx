@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { getEvent, updateEvent, createEvent } from "@/core/application/actions/event-actions"; // need updateEvent
+import { getEvent, updateEvent } from "@/core/application/actions/event-actions";
 import { EventForm } from "@/presentation/components/events/event-form";
 import type { CreateEventDto, IAiGuide, IEvent } from "@/core/domain/models/event";
 
-export default function EditEventPage({ params }: { params: { id: string } }) {
+export default function EditEventPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = use(params);
     const router = useRouter();
     const [event, setEvent] = useState<IEvent | null>(null);
     const [loading, setLoading] = useState(true);
@@ -17,7 +18,7 @@ export default function EditEventPage({ params }: { params: { id: string } }) {
     useEffect(() => {
         const fetchEvent = async () => {
             try {
-                const data = await getEvent(params.id);
+                const data = await getEvent(id);
                 setEvent(data as unknown as IEvent);
             } catch {
                 toast.error("Error al cargar la reunión");
@@ -27,7 +28,7 @@ export default function EditEventPage({ params }: { params: { id: string } }) {
             }
         };
         fetchEvent();
-    }, [params.id, router]);
+    }, [id, router]);
 
     const handleSubmit = async (
         data: CreateEventDto,
@@ -35,30 +36,21 @@ export default function EditEventPage({ params }: { params: { id: string } }) {
         aiStatus: string,
         aiModel: string | null,
         aiTokens: number | null,
-        isDraft: boolean
+        isDraft: boolean,
+        timezoneOffset: number
     ) => {
         if (!event) return;
 
         try {
-            // Reconstruct client auto-creation logic or just update?
-            // Since we are editing, we are updating the event.
-            // But we might also want to update client if name/email changed?
-            // For simplicity in MVP: We update the event. Client update is separate or implicit if we used ID.
-            // But `createEvent` handles client lookup/creation. `updateEvent` takes ID and updates.
-            // We need to handle client linkage here too if email changed.
-            // Actually `updateEvent` in actions just updates fields.
-            // Let's rely on `createEvent` logic but for update... or just update fields.
-            // If we use `updateEvent`, we need to resolve client_id if email changed.
-            // Ideally we should refactor `createEvent` logic to be reusable for `updateEvent` regarding client resolution.
-
-            // Since I cannot easily change backend actions right now without breaking things,
-            // I will assume for Edit we keep the same client OR we just update the basic fields.
-            // Actually, `EventForm` passes `CreateEventDto`.
-            // Let's do a quick check: if email changed, we might need a new client ID.
+            // Calculate timezone aware start_at string
+            const offsetHours = Math.floor(Math.abs(timezoneOffset) / 60).toString().padStart(2, "0");
+            const offsetMinutes = (Math.abs(timezoneOffset) % 60).toString().padStart(2, "0");
+            const sign = timezoneOffset > 0 ? "-" : "+";
+            const startAt = `${data.start_date}T${data.start_time}:00${sign}${offsetHours}:${offsetMinutes}`;
 
             const updates: Record<string, unknown> = {
                 title: data.title,
-                start_at: `${data.start_date}T${data.start_time}:00`,
+                start_at: startAt,
                 duration_min: data.duration_min,
                 request: data.request,
                 ai_guide: guide,

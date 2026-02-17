@@ -51,7 +51,8 @@ interface EventFormProps {
         aiStatus: string,
         aiModel: string | null,
         aiTokens: number | null,
-        isDraft: boolean
+        isDraft: boolean,
+        timezoneOffset: number
     ) => Promise<void>;
     isEditing?: boolean;
 }
@@ -61,6 +62,7 @@ export function EventForm({ initialData, onSubmit, isEditing = false }: EventFor
     const [aiStatus, setAiStatus] = useState<string>(initialData?.ai_status ?? "idle");
     const [aiModel, setAiModel] = useState<string | null>(initialData?.ai_model ?? null);
     const [aiTokens, setAiTokens] = useState<number | null>(initialData?.ai_tokens ?? null);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     const [saving, setSaving] = useState(false);
     const [showGuide, setShowGuide] = useState(!!initialData?.ai_guide); // Show initially if editing
@@ -131,6 +133,7 @@ export function EventForm({ initialData, onSubmit, isEditing = false }: EventFor
         }
 
         setAiStatus("generating");
+        setErrorMessage(null);
         try {
             const res = await fetch("/api/ai/generate", {
                 method: "POST",
@@ -163,8 +166,10 @@ export function EventForm({ initialData, onSubmit, isEditing = false }: EventFor
             });
         } catch (error) {
             setAiStatus("error");
+            const msg = error instanceof Error ? error.message : "Error desconocido";
+            setErrorMessage(msg);
             toast.error("Error al generar la guía", {
-                description: error instanceof Error ? error.message : "Error desconocido",
+                description: msg,
             });
         }
     };
@@ -172,7 +177,8 @@ export function EventForm({ initialData, onSubmit, isEditing = false }: EventFor
     const onFormSubmit = async (data: CreateEventDto, isDraft: boolean) => {
         setSaving(true);
         try {
-            await onSubmit(data, aiGuide, aiStatus, aiModel, aiTokens, isDraft);
+            const timezoneOffset = new Date().getTimezoneOffset();
+            await onSubmit(data, aiGuide, aiStatus, aiModel, aiTokens, isDraft, timezoneOffset);
         } finally {
             setSaving(false);
         }
@@ -349,13 +355,14 @@ export function EventForm({ initialData, onSubmit, isEditing = false }: EventFor
                                 </span>
                             </div>
                         )}
-                        {aiStatus === "error" && (
-                            <Badge variant="destructive">
-                                <AlertCircle className="h-3 w-3 mr-1" />
-                                Error — intenta de nuevo
-                            </Badge>
-                        )}
                     </div>
+
+                    {aiStatus === "error" && (
+                        <div className="flex items-center gap-2 p-3 text-sm text-destructive bg-destructive/10 rounded-md border border-destructive/20">
+                            <AlertCircle className="h-4 w-4 shrink-0" />
+                            <span>{errorMessage || "Error al generar la guía. Intenta de nuevo."}</span>
+                        </div>
+                    )}
 
                     {aiGuide && (
                         <div className="mt-4">

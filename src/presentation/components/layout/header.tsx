@@ -15,6 +15,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/presentation/components/ui/dropdown-menu";
+import { ModeToggle } from "@/presentation/components/layout/mode-toggle";
 
 interface HeaderProps {
     user: {
@@ -64,6 +65,7 @@ export function Header({ user, onMenuToggle }: HeaderProps) {
             </div>
 
             <div className="flex items-center gap-3">
+                <ModeToggle />
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <button className="flex items-center gap-2 rounded-full hover:bg-muted/60 p-1 pr-3 transition-colors cursor-pointer">

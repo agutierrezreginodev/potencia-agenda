@@ -18,7 +18,8 @@ export default function NewEventPage() {
         aiStatus: string,
         aiModel: string | null,
         aiTokens: number | null,
-        isDraft: boolean
+        isDraft: boolean,
+        timezoneOffset: number
     ) => {
         try {
             await createEvent(
@@ -27,7 +28,8 @@ export default function NewEventPage() {
                 aiStatus === "success" ? "success" : aiStatus === "error" ? "error" : "pending",
                 aiModel,
                 aiTokens,
-                isDraft
+                isDraft,
+                timezoneOffset
             );
             toast.success(isDraft ? "Borrador guardado" : "Reunión creada exitosamente");
             router.push(isDraft ? "/drafts" : "/agenda");

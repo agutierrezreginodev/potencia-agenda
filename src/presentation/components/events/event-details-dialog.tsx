@@ -29,7 +29,7 @@ import {
 import { Button } from "@/presentation/components/ui/button";
 import { Badge } from "@/presentation/components/ui/badge";
 import { Separator } from "@/presentation/components/ui/separator";
-import { ScrollArea } from "@/presentation/components/ui/scroll-area";
+
 import { deleteEvent } from "@/core/application/actions/event-actions";
 import { type IEvent, type IAiGuide } from "@/core/domain/models/event";
 import { AiGuidePreview } from "./ai-guide-preview";
@@ -92,7 +92,7 @@ export function EventDetailsDialog({
                     </div>
                 </DialogHeader>
 
-                <ScrollArea className="px-6 py-2 flex-1">
+                <div className="px-6 py-2 flex-1 min-h-0 overflow-y-auto">
                     <div className="space-y-6">
                         {/* Time & Client Overview */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
@@ -191,7 +191,7 @@ export function EventDetailsDialog({
                             </>
                         )}
                     </div>
-                </ScrollArea>
+                </div>
 
                 <div className="p-6 border-t mt-auto">
                     <DialogFooter className="gap-2 sm:gap-0">
@@ -199,7 +199,7 @@ export function EventDetailsDialog({
                             variant="destructive"
                             onClick={handleDelete}
                             disabled={deleting}
-                            className="mr-auto"
+                            className="w-full sm:w-auto sm:mr-auto"
                         >
                             {deleting ? (
                                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -208,11 +208,11 @@ export function EventDetailsDialog({
                             )}
                             Eliminar
                         </Button>
-                        <Button variant="outline" onClick={() => onOpenChange(false)}>
+                        <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
                             Cerrar
                         </Button>
-                        <Link href={`/events/${event.id}/edit`}>
-                            <Button className="w-full sm:w-auto">
+                        <Link href={`/events/${event.id}/edit`} className="w-full sm:w-auto">
+                            <Button className="w-full">
                                 <Pencil className="h-4 w-4 mr-2" />
                                 Editar
                             </Button>

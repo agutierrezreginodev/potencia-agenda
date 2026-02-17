@@ -135,26 +135,28 @@ export default function AgendaPage() {
             </div>
 
             {/* Navigation + view tabs */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon" onClick={goToPrev}>
-                        <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={goToToday}>
-                        Hoy
-                    </Button>
-                    <Button variant="outline" size="icon" onClick={goToNext}>
-                        <ChevronRight className="h-4 w-4" />
-                    </Button>
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 w-full md:w-auto">
+                    <div className="flex items-center justify-between w-full sm:w-auto gap-2">
+                        <Button variant="outline" size="icon" onClick={goToPrev}>
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={goToToday}>
+                            Hoy
+                        </Button>
+                        <Button variant="outline" size="icon" onClick={goToNext}>
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
                     <span
-                        className="ml-2 text-lg font-semibold capitalize"
+                        className="text-lg font-semibold capitalize text-center sm:text-left"
                         style={{ fontFamily: "var(--font-display)" }}
                     >
                         {format(currentDate, view === "month" ? "MMMM yyyy" : "'Semana del' d MMMM", { locale: es })}
                     </span>
                 </div>
-                <Tabs value={view} onValueChange={(v) => setView(v as "month" | "week")}>
-                    <TabsList>
+                <Tabs value={view} onValueChange={(v) => setView(v as "month" | "week")} className="w-full md:w-auto">
+                    <TabsList className="grid w-full grid-cols-2 md:w-auto">
                         <TabsTrigger value="month">Mes</TabsTrigger>
                         <TabsTrigger value="week">Semana</TabsTrigger>
                     </TabsList>
@@ -203,76 +205,78 @@ function MonthView({
     const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
     return (
-        <Card>
-            <CardContent className="p-0">
-                {/* Day headers */}
-                <div className="grid grid-cols-7 border-b">
-                    {DAY_NAMES.map((name) => (
-                        <div
-                            key={name}
-                            className="px-2 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider"
-                        >
-                            {name}
-                        </div>
-                    ))}
-                </div>
-
-                {/* Calendar grid */}
-                <div className="grid grid-cols-7">
-                    {days.map((day) => {
-                        const dayEvents = events.filter((e) =>
-                            isSameDay(new Date(e.start_at), day)
-                        );
-                        const isCurrentMonth = day.getMonth() === currentDate.getMonth();
-
-                        return (
+        <Card className="overflow-hidden">
+            <CardContent className="p-0 overflow-x-auto">
+                <div className="min-w-[800px]">
+                    {/* Day headers */}
+                    <div className="grid grid-cols-7 border-b">
+                        {DAY_NAMES.map((name) => (
                             <div
-                                key={day.toISOString()}
-                                className={cn(
-                                    "min-h-[100px] border-b border-r p-2 transition-colors",
-                                    !isCurrentMonth && "bg-muted/30",
-                                    isToday(day) && "bg-brand-50/50"
-                                )}
+                                key={name}
+                                className="px-2 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider"
                             >
-                                <span
+                                {name}
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Calendar grid */}
+                    <div className="grid grid-cols-7">
+                        {days.map((day) => {
+                            const dayEvents = events.filter((e) =>
+                                isSameDay(new Date(e.start_at), day)
+                            );
+                            const isCurrentMonth = day.getMonth() === currentDate.getMonth();
+
+                            return (
+                                <div
+                                    key={day.toISOString()}
                                     className={cn(
-                                        "text-sm font-medium inline-flex items-center justify-center w-7 h-7 rounded-full",
-                                        isToday(day) && "bg-brand-500 text-white",
-                                        !isCurrentMonth && "text-muted-foreground/50"
+                                        "min-h-[100px] border-b border-r p-2 transition-colors",
+                                        !isCurrentMonth && "bg-muted/30",
+                                        isToday(day) && "bg-brand-50/50"
                                     )}
                                 >
-                                    {format(day, "d")}
-                                </span>
-                                <div className="mt-1 space-y-1">
-                                    {dayEvents.slice(0, 3).map((event) => (
-                                        <div
-                                            key={event.id}
-                                            onClick={() => onEventClick(event.id)}
-                                            className={cn(
-                                                "text-[11px] px-1.5 py-0.5 rounded truncate cursor-pointer transition-colors",
-                                                event.is_draft
-                                                    ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
-                                                    : event.ai_status === "success"
-                                                        ? "bg-brand-100 text-brand-800 hover:bg-brand-200"
-                                                        : "bg-blue-100 text-blue-800 hover:bg-blue-200"
-                                            )}
-                                            title={`${event.title} — ${event.clients?.full_name}`}
-                                        >
-                                            <span className="font-medium">
-                                                {format(new Date(event.start_at), "HH:mm")}
-                                            </span>{" "}
-                                            {event.title}
-                                        </div>
-                                    ))}
-                                    {dayEvents.length > 3 && (
-                                        <span className="text-[10px] text-muted-foreground pl-1.5">
-                                            +{dayEvents.length - 3} más
-                                        </span>
-                                    )}
+                                    <span
+                                        className={cn(
+                                            "text-sm font-medium inline-flex items-center justify-center w-7 h-7 rounded-full",
+                                            isToday(day) && "bg-brand-500 text-white",
+                                            !isCurrentMonth && "text-muted-foreground/50"
+                                        )}
+                                    >
+                                        {format(day, "d")}
+                                    </span>
+                                    <div className="mt-1 space-y-1">
+                                        {dayEvents.slice(0, 3).map((event) => (
+                                            <div
+                                                key={event.id}
+                                                onClick={() => onEventClick(event.id)}
+                                                className={cn(
+                                                    "text-[11px] px-1.5 py-0.5 rounded truncate cursor-pointer transition-colors",
+                                                    event.is_draft
+                                                        ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
+                                                        : event.ai_status === "success"
+                                                            ? "bg-brand-100 text-brand-800 hover:bg-brand-200"
+                                                            : "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                                                )}
+                                                title={`${event.title} — ${event.clients?.full_name}`}
+                                            >
+                                                <span className="font-medium">
+                                                    {format(new Date(event.start_at), "HH:mm")}
+                                                </span>{" "}
+                                                {event.title}
+                                            </div>
+                                        ))}
+                                        {dayEvents.length > 3 && (
+                                            <span className="text-[10px] text-muted-foreground pl-1.5">
+                                                +{dayEvents.length - 3} más
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
+                    </div>
                 </div>
             </CardContent>
         </Card>
@@ -293,7 +297,7 @@ function WeekView({
     const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
     return (
-        <div className="grid grid-cols-7 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-3">
             {days.map((day) => {
                 const dayEvents = events.filter((e) =>
                     isSameDay(new Date(e.start_at), day)

@@ -5,6 +5,7 @@ import {
     BarChart3,
     DollarSign,
     Shield,
+    Clock,
 } from "lucide-react";
 import { Separator } from "@/presentation/components/ui/separator";
 import { Badge } from "@/presentation/components/ui/badge";
@@ -93,19 +94,29 @@ export function AiGuidePreview({ guide }: { guide: IAiGuide }) {
                         <DollarSign className="h-4 w-4 text-brand-500" />
                         Costos Estimados
                     </h4>
-                    <div className="grid grid-cols-3 gap-3 text-center">
-                        {[
-                            { label: "Setup", data: guide.estimated_costs.setup },
-                            { label: "Mensual", data: guide.estimated_costs.monthly },
-                            { label: "Anual", data: guide.estimated_costs.annual },
-                        ].map((cost) => (
-                            <div key={cost.label} className="p-3 rounded-lg border bg-surface">
-                                <p className="text-xs text-muted-foreground">{cost.label}</p>
-                                <p className="text-sm font-semibold mt-1">
-                                    ${cost.data.min.toLocaleString()} - ${cost.data.max.toLocaleString()}
-                                </p>
+                    <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                        {typeof guide.estimated_costs === 'string' ? (
+                            guide.estimated_costs
+                        ) : (
+                            // Fallback for legacy object structure
+                            <div className="grid grid-cols-3 gap-3 text-center">
+                                {guide.estimated_costs && typeof guide.estimated_costs === 'object' && [
+                                    { label: "Setup", data: (guide.estimated_costs as any).setup },
+                                    { label: "Mensual", data: (guide.estimated_costs as any).monthly },
+                                    { label: "Anual", data: (guide.estimated_costs as any).annual },
+                                ].map((cost) => (
+                                    <div key={cost.label} className="p-3 rounded-lg border bg-surface">
+                                        <p className="text-xs text-muted-foreground">{cost.label}</p>
+                                        <p className="text-sm font-semibold mt-1">
+                                            {/* Handle min/max object or direct value */}
+                                            {cost.data?.min !== undefined
+                                                ? `$${cost.data.min} - $${cost.data.max}`
+                                                : "N/A"}
+                                        </p>
+                                    </div>
+                                ))}
                             </div>
-                        ))}
+                        )}
                     </div>
                 </div>
             )}
@@ -140,25 +151,30 @@ export function AiGuidePreview({ guide }: { guide: IAiGuide }) {
                 </div>
             )}
 
-            {/* Timeline & next steps */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {guide.estimated_timeline && (
-                    <div className="p-3 rounded-lg border bg-brand-50 text-sm">
-                        <p className="font-semibold text-brand-700">⏰ Cronograma estimado</p>
-                        <p className="text-brand-600 mt-1">{guide.estimated_timeline}</p>
-                    </div>
-                )}
-                {guide.next_steps?.length > 0 && (
-                    <div className="p-3 rounded-lg border bg-surface text-sm">
-                        <p className="font-semibold">🚀 Próximos pasos</p>
-                        <ul className="list-disc list-inside text-muted-foreground mt-1 space-y-0.5">
-                            {guide.next_steps.map((step, i) => (
-                                <li key={i} className="text-xs">{step}</li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
-            </div>
+            {/* Timeline */}
+            {guide.estimated_timeline && (
+                <div className="space-y-2">
+                    <h4 className="text-sm font-semibold flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-brand-500" />
+                        Cronograma Estimado
+                    </h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                        {guide.estimated_timeline}
+                    </p>
+                </div>
+            )}
+
+            {/* Next steps */}
+            {guide.next_steps?.length > 0 && (
+                <div className="p-3 rounded-lg border bg-surface text-sm">
+                    <p className="font-semibold">🚀 Próximos pasos</p>
+                    <ul className="list-disc list-inside text-muted-foreground mt-1 space-y-0.5">
+                        {guide.next_steps.map((step, i) => (
+                            <li key={i} className="text-xs">{step}</li>
+                        ))}
+                    </ul>
+                </div>
+            )}
         </div>
     );
 }
