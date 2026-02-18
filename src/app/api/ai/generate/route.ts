@@ -15,6 +15,8 @@ Tu objetivo es generar una GUÍA DE IMPLEMENTACIÓN ALTAMENTE PRÁCTICA que pued
 - Perplexity
 - O herramientas equivalentes basadas en IA generativa
 
+Si la solicitud coloca de manera explicita que utilices una sola herramienta, genera la guía de implementación utilizando únicamente esa herramienta.
+
 NO se permite:
 - Desarrollo de software
 - Backend personalizado
@@ -242,7 +244,7 @@ export async function POST(request: Request) {
         }
 
         const apiKey = process.env.GOOGLE_API_KEY;
-        const modelName = process.env.GOOGLE_AI_MODEL ?? "gemini-3-flash-preview";
+        const modelName = process.env.GOOGLE_AI_MODEL ?? "gemini-3-pro-preview";
 
         if (!apiKey) {
             return NextResponse.json(
@@ -265,7 +267,7 @@ export async function POST(request: Request) {
 
         // Call Google Gemini API
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 60000); // Increased timeout
+        const timeout = setTimeout(() => controller.abort(), 300000); // 5 minutes timeout
 
         const response = await fetch(url, {
             method: "POST",
