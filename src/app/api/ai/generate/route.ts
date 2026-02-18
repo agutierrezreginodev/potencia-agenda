@@ -105,122 +105,11 @@ REGLAS CRÍTICAS:
 6. Markdown limpio sin bloques de código.`;
 
 function parseMarkdownGuide(text: string): any {
-    const sections: Record<string, string> = {};
-    const regex = /## (.*?)\n([\s\S]*?)(?=## |$)/g;
-    let match;
-    while ((match = regex.exec(text)) !== null) {
-        sections[match[1].trim()] = match[2].trim();
-    }
-
-    // Helper to find key with partial match
-    const findContent = (keyPart: string) => {
-        const key = Object.keys(sections).find(k => k.toLowerCase().includes(keyPart.toLowerCase())) || "";
-        return sections[key] || "";
-    };
-
+    const out_of_scope = text.includes("OUT_OF_SCOPE");
     return {
-        executive_summary: sections["Resumen Ejecutivo"] || "Resumen no disponible.",
-        request_analysis: sections["Caso de Uso Específico"] || sections["Análisis de la Solicitud"] || "Análisis no disponible.",
-        recommended_techs: (findContent("Herramientas de IA") || findContent("Tecnologías Recomendadas"))
-            .split("\n")
-            .filter(l => l.trim().startsWith("*") || l.trim().startsWith("-"))
-            .map(l => {
-                const clean = l.replace(/^[\*\-] /, "").trim();
-                const splitIndex = clean.search(/[:\-]/);
-                let name = "Tecnología";
-                let description = clean;
-                let use_case = "";
-
-                if (splitIndex !== -1) {
-                    name = clean.substring(0, splitIndex).replace(/\*\*/g, "").trim();
-                    const rest = clean.substring(splitIndex + 1).trim();
-                    description = rest;
-                }
-                return { name, description, use_case };
-            })
-            .slice(0, 6),
-        architecture: {
-            description: (findContent("Arquitectura") || "").split("\n")[0] || "",
-            components: (findContent("Arquitectura") || "")
-                .split("\n")
-                .filter(l => l.trim().startsWith("*") || l.trim().startsWith("-"))
-                .map(l => l.replace(/^[\*\-] /, "").trim())
-                .slice(0, 8),
-            data_flow: ""
-        },
-        implementation_steps: (() => {
-            const raw = findContent("Paso a Paso") || findContent("Pasos de Implementación");
-            const steps: any[] = [];
-            const lines = raw.split("\n");
-            let currentStep: any = null;
-
-            for (const line of lines) {
-                // Matches format: 1. **[Tool] Title (Duration)**
-                const stepMatch = line.trim().match(/^(\d+)[\.)]\s*\*\*(?:\[(.*?)\]\s*)?([^\(]*)(?:\((.*?)\))?\*\*/);
-
-                if (stepMatch) {
-                    if (currentStep) steps.push(currentStep);
-                    currentStep = {
-                        step: parseInt(stepMatch[1]),
-                        tool: stepMatch[2]?.trim() || "General",
-                        title: stepMatch[3]?.trim() || `Paso ${stepMatch[1]}`,
-                        estimated_duration: stepMatch[4]?.trim() || "Variable",
-                        description: "",
-                        resources: []
-                    };
-                } else if (currentStep && line.trim()) {
-                    currentStep.description += (currentStep.description ? "\n" : "") + line.trim();
-                }
-            }
-            if (currentStep) steps.push(currentStep);
-
-            // Fallback for legacy format
-            if (steps.length === 0) {
-                return lines
-                    .filter(l => /^\d+[\.)]/.test(l.trim()))
-                    .map((l, i) => {
-                        const clean = l.replace(/^\d+[\.)] /, "").trim();
-                        const splitIndex = clean.indexOf(":");
-                        return {
-                            step: i + 1,
-                            title: splitIndex !== -1 ? clean.substring(0, splitIndex).replace(/\*\*/g, "").trim() : `Paso ${i + 1}`,
-                            description: splitIndex !== -1 ? clean.substring(splitIndex + 1).trim() : clean,
-                            estimated_duration: "Variable",
-                            resources: [],
-                            tool: "General"
-                        };
-                    })
-                    .slice(0, 12);
-            }
-
-            return steps.slice(0, 12);
-        })(),
-        estimated_costs: findContent("Costos Estimados") || "Costos no disponibles.",
-        risks_and_challenges: (findContent("Riesgos") || "")
-            .split("\n")
-            .filter(l => l.trim().startsWith("*") || l.trim().startsWith("-"))
-            .map(l => {
-                const clean = l.replace(/^[\*\-] /, "").trim();
-                const splitIndex = clean.indexOf(":");
-                return {
-                    risk: splitIndex !== -1 ? clean.substring(0, splitIndex).replace(/\*\*/g, "") : "Riesgo",
-                    level: clean.toLowerCase().includes("alto") ? "alto" : clean.toLowerCase().includes("bajo") ? "bajo" : "medio",
-                    mitigation: splitIndex !== -1 ? clean.substring(splitIndex + 1).trim() : clean
-                };
-            })
-            .slice(0, 5),
-        next_steps: (findContent("Casos de Uso Adicionales") || findContent("Próximos Pasos"))
-            .split("\n")
-            .filter(l => l.trim().startsWith("*") || l.trim().startsWith("-"))
-            .map(l => l.replace(/^[\*\-] /, "").trim())
-            .slice(0, 5),
-        estimated_timeline: sections["Cronograma Estimado"] || "Consultar detalles en pasos.",
-        success_metrics: (findContent("Indicadores") || findContent("Métricas"))
-            .split("\n")
-            .filter(l => l.trim().startsWith("*") || l.trim().startsWith("-"))
-            .map(l => l.replace(/^[\*\-] /, "").trim())
-            .slice(0, 5),
-        out_of_scope: text.includes("OUT_OF_SCOPE")
+        markdown: text,
+        out_of_scope,
+        message: out_of_scope ? text : undefined
     };
 }
 
@@ -243,29 +132,19 @@ export async function POST(request: Request) {
             );
         }
 
-        const apiKey = process.env.GOOGLE_API_KEY;
-        const modelName = process.env.GOOGLE_AI_MODEL ?? "gemini-3-pro-preview";
+        const apiKey = process.env.GROQ_API_KEY;
+        const modelName = process.env.GROQ_MODEL ?? "openai/gpt-oss-120b";
 
         if (!apiKey) {
             return NextResponse.json(
-                { error: "API Key de Google AI no configurada" },
+                { error: "API Key de Groq no configurada" },
                 { status: 500 }
             );
         }
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+        const url = "https://api.groq.com/openai/v1/chat/completions";
 
-        const systemInstruction = {
-            role: "user",
-            parts: [{ text: SYSTEM_PROMPT }]
-        };
-
-        const userMessage = {
-            role: "user",
-            parts: [{ text: `Solicitud del cliente:\n\n${clientRequest}` }]
-        };
-
-        // Call Google Gemini API
+        // Call Groq API
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 300000); // 5 minutes timeout
 
@@ -273,13 +152,16 @@ export async function POST(request: Request) {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
+                "Authorization": `Bearer ${apiKey}`
             },
             body: JSON.stringify({
-                contents: [systemInstruction, userMessage],
-                generationConfig: {
-                    temperature: 0.7,
-                    maxOutputTokens: 8192,
-                }
+                model: modelName,
+                messages: [
+                    { role: "system", content: SYSTEM_PROMPT },
+                    { role: "user", content: `Solicitud del cliente:\n\n${clientRequest}` }
+                ],
+                temperature: 0.7,
+                max_tokens: 8192,
             }),
             signal: controller.signal,
         });
@@ -288,20 +170,17 @@ export async function POST(request: Request) {
 
         if (!response.ok) {
             const errorText = await response.text();
-            let errorMessage = `Google AI error: ${response.status}`;
+            let errorMessage = `Groq API error: ${response.status}`;
 
             try {
                 const errorJson = JSON.parse(errorText);
                 if (errorJson.error) {
-                    // Extract cleaner message
                     const msg = errorJson.error.message;
-                    if (msg.includes("not found") || response.status === 404) {
-                        errorMessage = "Modelo no encontrado o región no soportada. Verifica tu API Key.";
-                    } else if (response.status === 400 && msg.includes("API key")) {
+                    if (response.status === 401) {
                         errorMessage = "API Key inválida o expirada.";
                     } else if (response.status === 429) {
                         errorMessage = "Límite de cuota excedido. Intenta más tarde.";
-                    } else {
+                    } else if (msg) {
                         errorMessage = `Error de IA: ${msg}`;
                     }
                 }
@@ -313,16 +192,16 @@ export async function POST(request: Request) {
         }
 
         const result = await response.json();
-        const content = result.candidates?.[0]?.content?.parts?.[0]?.text;
-        const usage = result.usageMetadata;
+        const content = result.choices?.[0]?.message?.content;
+        const usage = result.usage;
 
         if (!content) {
             throw new Error("No se recibió respuesta del modelo de IA");
         }
 
-        console.log("--- GEMINI MARKDOWN CONTENT ---");
+        console.log("--- GROQ MARKDOWN CONTENT ---");
         console.log(content);
-        console.log("-------------------------------");
+        console.log("-----------------------------");
 
         // Parse the Markdown response
         const guide = parseMarkdownGuide(content);
@@ -334,7 +213,7 @@ export async function POST(request: Request) {
                 outOfScope: true,
                 message: guide.message,
                 model: modelName,
-                tokens: (usage?.promptTokenCount ?? 0) + (usage?.candidatesTokenCount ?? 0),
+                tokens: (usage?.prompt_tokens ?? 0) + (usage?.completion_tokens ?? 0),
                 latencyMs: Date.now() - startTime,
             });
         }
@@ -345,8 +224,8 @@ export async function POST(request: Request) {
         await supabase.from("ai_generation_logs").insert({
             user_id: user.id,
             model: modelName,
-            prompt_tokens: usage?.promptTokenCount ?? 0,
-            completion_tokens: usage?.candidatesTokenCount ?? 0,
+            prompt_tokens: usage?.prompt_tokens ?? 0,
+            completion_tokens: usage?.completion_tokens ?? 0,
             status: "success",
             latency_ms: latencyMs,
         });
@@ -354,7 +233,7 @@ export async function POST(request: Request) {
         return NextResponse.json({
             guide,
             model: modelName,
-            tokens: (usage?.promptTokenCount ?? 0) + (usage?.candidatesTokenCount ?? 0),
+            tokens: (usage?.prompt_tokens ?? 0) + (usage?.completion_tokens ?? 0),
             latencyMs,
         });
 
@@ -369,7 +248,7 @@ export async function POST(request: Request) {
             if (user) {
                 await supabase.from("ai_generation_logs").insert({
                     user_id: user.id,
-                    model: process.env.GOOGLE_AI_MODEL ?? "unknown",
+                    model: process.env.GROQ_MODEL ?? "unknown",
                     prompt_tokens: 0,
                     completion_tokens: 0,
                     status: errorMsg.includes("abort") ? "timeout" : "error",

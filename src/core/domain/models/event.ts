@@ -1,35 +1,11 @@
 import { z } from "zod";
 
 export interface IAiGuide {
-    executive_summary: string;
-    request_analysis: string;
-    recommended_techs: Array<{
-        name: string;
-        description: string;
-        use_case: string;
-    }>;
-    architecture: {
-        description: string;
-        components: string[];
-        data_flow: string;
-    };
-    implementation_steps: Array<{
-        step: number;
-        title: string;
-        description: string;
-        estimated_duration: string;
-        resources: string[];
-        tool?: string;
-    }>;
-    estimated_costs: string;
-    risks_and_challenges: Array<{
-        risk: string;
-        level: "alto" | "medio" | "bajo";
-        mitigation: string;
-    }>;
-    next_steps: string[];
-    estimated_timeline: string;
-    success_metrics: string[];
+    markdown?: string;
+    out_of_scope?: boolean;
+    message?: string;
+    /** @deprecated Field from legacy format, kept for backward compatibility check */
+    executive_summary?: string;
 }
 
 export type AiStatus = "pending" | "success" | "error";

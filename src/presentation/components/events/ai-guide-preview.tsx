@@ -1,196 +1,98 @@
-import {
-    FileText,
-    Target,
-    Lightbulb,
-    BarChart3,
-    DollarSign,
-    Shield,
-    Clock,
-} from "lucide-react";
-import { Separator } from "@/presentation/components/ui/separator";
-import { Badge } from "@/presentation/components/ui/badge";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { AlertTriangle, CheckCircle2, ChevronRight } from "lucide-react";
 import type { IAiGuide } from "@/core/domain/models/event";
 
 export function AiGuidePreview({ guide }: { guide: IAiGuide }) {
-    const sections = [
-        {
-            key: "executive_summary",
-            title: "Resumen Ejecutivo",
-            icon: FileText,
-            content: guide.executive_summary,
-        },
-        {
-            key: "request_analysis",
-            title: "Análisis de la Solicitud",
-            icon: Target,
-            content: guide.request_analysis,
-        },
-    ];
+    if (guide.out_of_scope) {
+        return (
+            <div className="p-4 rounded-lg bg-orange-50 border border-orange-200 mt-4 animate-fade-up">
+                <div className="flex items-center gap-2 text-orange-700 font-medium mb-2">
+                    <AlertTriangle className="h-5 w-5" />
+                    <span>Solicitud Fuera de Alcance</span>
+                </div>
+                <p className="text-sm text-orange-600 leading-relaxed">
+                    {guide.message || guide.markdown || "La solicitud excede las capacidades actuales del sistema."}
+                </p>
+            </div>
+        );
+    }
+
+    if (!guide.markdown && !guide.executive_summary) {
+        return null;
+    }
+
+    // Fallback for legacy data if markdown is missing but executive_summary exists
+    if (!guide.markdown && guide.executive_summary) {
+        return (
+            <div className="p-4 rounded-lg border bg-surface text-sm text-muted-foreground mt-4">
+                <p>Formato de guía antiguo. Por favor regenera la guía para ver el formato actualizado.</p>
+            </div>
+        );
+    }
 
     return (
-        <div className="space-y-4 mt-4 animate-fade-up">
-            {sections.map((section) => (
-                <div key={section.key} className="space-y-2">
-                    <h4 className="text-sm font-semibold flex items-center gap-2">
-                        <section.icon className="h-4 w-4 text-brand-500" />
-                        {section.title}
-                    </h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
-                        {section.content}
-                    </p>
-                </div>
-            ))}
-
-            <Separator />
-
-            {/* Recommended technologies */}
-            {guide.recommended_techs?.length > 0 && (
-                <div className="space-y-2">
-                    <h4 className="text-sm font-semibold flex items-center gap-2">
-                        <Lightbulb className="h-4 w-4 text-brand-500" />
-                        Tecnologías Recomendadas
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {guide.recommended_techs.map((tech, i) => (
-                            <div key={i} className="p-3 rounded-lg border bg-surface text-sm">
-                                <p className="font-medium">{tech.name}</p>
-                                <p className="text-muted-foreground text-xs mt-1">{tech.description}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            <Separator />
-
-            {/* Implementation steps */}
-            {guide.implementation_steps?.length > 0 && (
-                <div className="space-y-2">
-                    <h4 className="text-sm font-semibold flex items-center gap-2">
-                        <BarChart3 className="h-4 w-4 text-brand-500" />
-                        Pasos de Implementación
-                    </h4>
-                    <div className="space-y-2">
-                        {guide.implementation_steps.map((step, i) => (
-                            <div key={i} className="flex gap-3 p-3 rounded-lg border bg-surface text-sm">
-                                <span className="text-brand-500 font-bold shrink-0 mt-0.5">{step.step}.</span>
-                                <div className="flex-1">
-                                    <div className="flex items-start justify-between gap-2 mb-1.5">
-                                        <div className="space-y-1">
-                                            {step.tool && step.tool !== "General" && (
-                                                <Badge variant="secondary" className="text-[10px] h-5 px-2 bg-brand-50 text-brand-700 border border-brand-200 mb-1 hover:bg-brand-100">
-                                                    {step.tool}
-                                                </Badge>
-                                            )}
-                                            <p className="font-semibold text-foreground">{step.title}</p>
-                                        </div>
-                                    </div>
-
-                                    <p className="text-muted-foreground text-xs leading-relaxed whitespace-pre-line mb-2">
-                                        {step.description}
-                                    </p>
-
-                                    <div className="flex items-center gap-1.5 text-xs text-brand-600 font-medium bg-brand-50/50 w-fit px-2 py-1 rounded-md">
-                                        <Clock className="h-3 w-3" />
-                                        <span>{step.estimated_duration}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            <Separator />
-
-            {/* Costs */}
-            {guide.estimated_costs && (
-                <div className="space-y-2">
-                    <h4 className="text-sm font-semibold flex items-center gap-2">
-                        <DollarSign className="h-4 w-4 text-brand-500" />
-                        Costos Estimados
-                    </h4>
-                    <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
-                        {typeof guide.estimated_costs === 'string' ? (
-                            guide.estimated_costs
-                        ) : (
-                            // Fallback for legacy object structure
-                            <div className="grid grid-cols-3 gap-3 text-center">
-                                {guide.estimated_costs && typeof guide.estimated_costs === 'object' && [
-                                    { label: "Setup", data: (guide.estimated_costs as any).setup },
-                                    { label: "Mensual", data: (guide.estimated_costs as any).monthly },
-                                    { label: "Anual", data: (guide.estimated_costs as any).annual },
-                                ].map((cost) => (
-                                    <div key={cost.label} className="p-3 rounded-lg border bg-surface">
-                                        <p className="text-xs text-muted-foreground">{cost.label}</p>
-                                        <p className="text-sm font-semibold mt-1">
-                                            {/* Handle min/max object or direct value */}
-                                            {cost.data?.min !== undefined
-                                                ? `$${cost.data.min} - $${cost.data.max}`
-                                                : "N/A"}
-                                        </p>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {/* Risks */}
-            {guide.risks_and_challenges?.length > 0 && (
-                <div className="space-y-2">
-                    <h4 className="text-sm font-semibold flex items-center gap-2">
-                        <Shield className="h-4 w-4 text-brand-500" />
-                        Riesgos y Desafíos
-                    </h4>
-                    <div className="space-y-2">
-                        {guide.risks_and_challenges.map((risk, i) => (
-                            <div key={i} className="p-3 rounded-lg border bg-surface text-sm">
-                                <div className="flex items-center gap-2">
-                                    <Badge
-                                        variant={
-                                            risk.level === "alto" ? "destructive" : risk.level === "medio" ? "warning" : "success"
-                                        }
-                                        className="text-[10px]"
-                                    >
-                                        {risk.level.toUpperCase()}
-                                    </Badge>
-                                    <span className="font-medium">{risk.risk}</span>
-                                </div>
-                                <p className="text-muted-foreground text-xs mt-1">
-                                    Mitigación: {risk.mitigation}
-                                </p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Timeline */}
-            {guide.estimated_timeline && (
-                <div className="space-y-2">
-                    <h4 className="text-sm font-semibold flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-brand-500" />
-                        Cronograma Estimado
-                    </h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
-                        {guide.estimated_timeline}
-                    </p>
-                </div>
-            )}
-
-            {/* Next steps */}
-            {guide.next_steps?.length > 0 && (
-                <div className="p-3 rounded-lg border bg-surface text-sm">
-                    <p className="font-semibold">🚀 Próximos pasos</p>
-                    <ul className="list-disc list-inside text-muted-foreground mt-1 space-y-0.5">
-                        {guide.next_steps.map((step, i) => (
-                            <li key={i} className="text-xs">{step}</li>
-                        ))}
-                    </ul>
-                </div>
-            )}
+        <div className="mt-6 animate-fade-up">
+            <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                    h2: ({ node, ...props }) => (
+                        <h2 className="text-xl font-display font-bold text-foreground mt-8 mb-4 flex items-center gap-2 border-b border-border pb-2" {...props} />
+                    ),
+                    h3: ({ node, ...props }) => (
+                        <h3 className="text-lg font-semibold text-foreground mt-6 mb-3" {...props} />
+                    ),
+                    p: ({ node, ...props }) => (
+                        <p className="text-sm text-muted-foreground leading-relaxed mb-4" {...props} />
+                    ),
+                    ul: ({ node, ...props }) => (
+                        <ul className="space-y-2 mb-4 list-none pl-1" {...props} />
+                    ),
+                    ol: ({ node, ...props }) => (
+                        <ol className="space-y-2 mb-4 list-decimal pl-5 text-sm text-muted-foreground marker:font-medium marker:text-foreground" {...props} />
+                    ),
+                    li: ({ node, ...props }) => {
+                        const parent = (node as any)?.parent;
+                        if (parent?.tagName === 'ul') {
+                            return (
+                                <li className="text-sm text-muted-foreground pl-0 flex gap-2 items-start" {...props}>
+                                    <span className="mt-2 h-1.5 w-1.5 rounded-full bg-brand-500 shrink-0" />
+                                    <span>{props.children}</span>
+                                </li>
+                            );
+                        }
+                        return <li className="pl-1 text-sm text-muted-foreground" {...props} />;
+                    },
+                    strong: ({ node, ...props }) => (
+                        <strong className="font-semibold text-foreground" {...props} />
+                    ),
+                    table: ({ node, ...props }) => (
+                        <div className="my-6 w-full overflow-y-auto rounded-lg border bg-surface">
+                            <table className="w-full text-sm" {...props} />
+                        </div>
+                    ),
+                    thead: ({ node, ...props }) => (
+                        <thead className="bg-muted/50 text-left font-medium text-foreground" {...props} />
+                    ),
+                    tbody: ({ node, ...props }) => (
+                        <tbody className="divide-y divide-border bg-card" {...props} />
+                    ),
+                    tr: ({ node, ...props }) => (
+                        <tr className="transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted" {...props} />
+                    ),
+                    th: ({ node, ...props }) => (
+                        <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0" {...props} />
+                    ),
+                    td: ({ node, ...props }) => (
+                        <td className="p-4 align-middle [&:has([role=checkbox])]:pr-0 leading-relaxed text-muted-foreground" {...props} />
+                    ),
+                    blockquote: ({ node, ...props }) => (
+                        <blockquote className="mt-6 border-l-2 border-brand-500 pl-6 italic text-muted-foreground" {...props} />
+                    ),
+                }}
+            >
+                {guide.markdown}
+            </ReactMarkdown>
         </div>
     );
 }
