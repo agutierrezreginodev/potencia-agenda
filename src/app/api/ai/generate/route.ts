@@ -57,27 +57,19 @@ Explica cómo fluye la información entre herramientas.
 ## Paso a Paso de Implementación (2 Horas o Menos)
 (Esta es la sección más importante. Debe ser extremadamente accionable)
 
-Divide por bloques de tiempo reales:
+Divide por bloques de tiempo reales.
 
-1. **Minuto 0-20: Preparación**
-   - Configuración exacta
-   - Plantillas necesarias
-   - Estructura de prompts base
+FORMATO OBLIGATORIO PARA CADA PASO:
+1. **[HERRAMIENTA] TÍTULO DEL PASO (DURACIÓN)**
+   Descripción detallada y accionable del paso.
+   (Incluye configuración, prompts, y acciones específicas)
 
-2. **Minuto 20-60: Construcción del Sistema**
-   - Creación de prompts optimizados
-   - Configuración de documentos base
-   - Integración manual entre herramientas
+Ejemplo:
+1. **[ChatGPT] Preparación de Entorno (Minuto 0-15)**
+   Configura una nueva conversación en ChatGPT. Copia y pega el prompt de contexto proporcionado en la sección de plantillas...
 
-3. **Minuto 60-100: Prueba y Ajustes**
-   - Prueba real con un caso
-   - Ajuste fino de prompts
-   - Estandarización
-
-4. **Minuto 100-120: Documentación y Transferencia**
-   - Manual rápido de uso
-   - Checklist operativo
-   - Capacitación básica al equipo
+4. **[Canva] Diseño Final (Minuto 100-120)**
+   Exporta el contenido y abre Canva...
 
 ## Plantillas Clave
 (Incluye ejemplos de prompts estructurados listos para copiar y pegar)
@@ -154,29 +146,53 @@ function parseMarkdownGuide(text: string): any {
                 .slice(0, 8),
             data_flow: ""
         },
-        implementation_steps: (findContent("Paso a Paso") || findContent("Pasos de Implementación"))
-            .split("\n")
-            .filter(l => /^\d+[\.)]/.test(l.trim()))
-            .map((l, i) => {
-                const clean = l.replace(/^\d+[\.)] /, "").trim();
-                const splitIndex = clean.indexOf(":");
-                let title = `Paso ${i + 1}`;
-                let description = clean;
+        implementation_steps: (() => {
+            const raw = findContent("Paso a Paso") || findContent("Pasos de Implementación");
+            const steps: any[] = [];
+            const lines = raw.split("\n");
+            let currentStep: any = null;
 
-                if (splitIndex !== -1) {
-                    title = clean.substring(0, splitIndex).replace(/\*\*/g, "").trim();
-                    description = clean.substring(splitIndex + 1).trim();
+            for (const line of lines) {
+                // Matches format: 1. **[Tool] Title (Duration)**
+                const stepMatch = line.trim().match(/^(\d+)[\.)]\s*\*\*(?:\[(.*?)\]\s*)?([^\(]*)(?:\((.*?)\))?\*\*/);
+
+                if (stepMatch) {
+                    if (currentStep) steps.push(currentStep);
+                    currentStep = {
+                        step: parseInt(stepMatch[1]),
+                        tool: stepMatch[2]?.trim() || "General",
+                        title: stepMatch[3]?.trim() || `Paso ${stepMatch[1]}`,
+                        estimated_duration: stepMatch[4]?.trim() || "Variable",
+                        description: "",
+                        resources: []
+                    };
+                } else if (currentStep && line.trim()) {
+                    currentStep.description += (currentStep.description ? "\n" : "") + line.trim();
                 }
+            }
+            if (currentStep) steps.push(currentStep);
 
-                return {
-                    step: i + 1,
-                    title,
-                    description,
-                    estimated_duration: "Variable",
-                    resources: []
-                };
-            })
-            .slice(0, 12),
+            // Fallback for legacy format
+            if (steps.length === 0) {
+                return lines
+                    .filter(l => /^\d+[\.)]/.test(l.trim()))
+                    .map((l, i) => {
+                        const clean = l.replace(/^\d+[\.)] /, "").trim();
+                        const splitIndex = clean.indexOf(":");
+                        return {
+                            step: i + 1,
+                            title: splitIndex !== -1 ? clean.substring(0, splitIndex).replace(/\*\*/g, "").trim() : `Paso ${i + 1}`,
+                            description: splitIndex !== -1 ? clean.substring(splitIndex + 1).trim() : clean,
+                            estimated_duration: "Variable",
+                            resources: [],
+                            tool: "General"
+                        };
+                    })
+                    .slice(0, 12);
+            }
+
+            return steps.slice(0, 12);
+        })(),
         estimated_costs: findContent("Costos Estimados") || "Costos no disponibles.",
         risks_and_challenges: (findContent("Riesgos") || "")
             .split("\n")

@@ -73,11 +73,27 @@ export function AiGuidePreview({ guide }: { guide: IAiGuide }) {
                     <div className="space-y-2">
                         {guide.implementation_steps.map((step, i) => (
                             <div key={i} className="flex gap-3 p-3 rounded-lg border bg-surface text-sm">
-                                <span className="text-brand-500 font-bold shrink-0">{step.step}.</span>
-                                <div>
-                                    <p className="font-medium">{step.title}</p>
-                                    <p className="text-muted-foreground text-xs mt-0.5">{step.description}</p>
-                                    <p className="text-xs text-brand-500 mt-1">⏱️ {step.estimated_duration}</p>
+                                <span className="text-brand-500 font-bold shrink-0 mt-0.5">{step.step}.</span>
+                                <div className="flex-1">
+                                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                                        <div className="space-y-1">
+                                            {step.tool && step.tool !== "General" && (
+                                                <Badge variant="secondary" className="text-[10px] h-5 px-2 bg-brand-50 text-brand-700 border border-brand-200 mb-1 hover:bg-brand-100">
+                                                    {step.tool}
+                                                </Badge>
+                                            )}
+                                            <p className="font-semibold text-foreground">{step.title}</p>
+                                        </div>
+                                    </div>
+
+                                    <p className="text-muted-foreground text-xs leading-relaxed whitespace-pre-line mb-2">
+                                        {step.description}
+                                    </p>
+
+                                    <div className="flex items-center gap-1.5 text-xs text-brand-600 font-medium bg-brand-50/50 w-fit px-2 py-1 rounded-md">
+                                        <Clock className="h-3 w-3" />
+                                        <span>{step.estimated_duration}</span>
+                                    </div>
                                 </div>
                             </div>
                         ))}

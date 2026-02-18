@@ -19,6 +19,7 @@ export interface IAiGuide {
         description: string;
         estimated_duration: string;
         resources: string[];
+        tool?: string;
     }>;
     estimated_costs: string;
     risks_and_challenges: Array<{
